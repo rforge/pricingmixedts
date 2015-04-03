@@ -1,0 +1,11 @@
+# exportPattern("^[[:alpha:]]+")
+import("methods")
+import("gmm")
+import("MixedTS")
+
+
+exportClasses("OptionData")
+
+exportMethods(Qparam.MixedTS)
+
+export(DataOpt) # Returns an object of Class OptionData that contains the available information about Options
