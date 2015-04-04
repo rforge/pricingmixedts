@@ -88,7 +88,7 @@ setClass("OptionData",
          
 )
 DataOpt<-function(UnderPrice, PriceOpt, ImpliedVol, TimeToMat, 
-                  Strike, type = "call", rate = 0, qyield = 0, Date = Sys.Date(),
+                  Strike, type = "CALL", rate = 0, qyield = 0, Date = Sys.Date(),
                   YearBasis = 360){
   
   if((missing(PriceOpt) && missing(ImpliedVol))|| missing(Strike) || missing(TimeToMat)){
@@ -140,7 +140,7 @@ OptBSprice <- function(S, X, r, expTime, sig, y, type) {
   d1 <- (log(S/X)+(rf+sig^2/2)*expTime)/sig*sqrt(expTime)
   d2 <- d1 - sig * sqrt(expTime)
   for(i in c(1:NumData)){
-    if(type[i]=="call"){
+    if(type[i]=="CALL"){
       res[i] <- S[i]*pnorm(d1[i]) - X[i]*exp(-rf[i]*expTime[i])*pnorm(d2[i])
     }else{
       res[i] <- X[i]*exp(-rf[i]*expTime[i]) * pnorm(-d2[i]) - S[i]*pnorm(-d1[i])
