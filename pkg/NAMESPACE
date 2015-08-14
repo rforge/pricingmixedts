@@ -5,8 +5,10 @@ import("MixedTS")
 
 
 exportClasses("OptionData")
+exportClasses("calibrates.MixedTS")
 
 exportMethods(Qparam.MixedTS)
 exportMethods(OptionPrice)
+exportMethods(calibrate)
 
 export(DataOpt) # Returns an object of Class OptionData that contains the available information about Options

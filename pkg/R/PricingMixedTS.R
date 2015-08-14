@@ -10,7 +10,7 @@ setMethod("Qparam.MixedTS","param.MixedTS",
               res<-Qparam.MixedTS.aux(mu0=object@mu0,
                                  mu=object@mu, sig=object@sigma, a=object@a,
                                  alpha=object@alpha, lambda_p=object@lambda_p,lambda_m=object@lambda_m,
-                                 ret=ret)
+                                 ret=ret, Parametrization=object@Parametrization)
             }else{
               warning("The Q parameters are available only for gamma mixing density")
               return(NULL)
@@ -20,7 +20,7 @@ setMethod("Qparam.MixedTS","param.MixedTS",
 )
 
 
-Qparam.MixedTS.aux<-function(mu0, mu, sig, a, alpha, lambda_p, lambda_m, ret){
+Qparam.MixedTS.aux<-function(mu0, mu, sig, a, alpha, lambda_p, lambda_m, ret, Parametrization){
   # Find c^{*} that ensures the underlyng price process is a martingale
   dum.env<-new.env()
   assign("mu0", mu0, envir = dum.env)
@@ -31,31 +31,44 @@ Qparam.MixedTS.aux<-function(mu0, mu, sig, a, alpha, lambda_p, lambda_m, ret){
   assign("lambda_p", lambda_p, envir = dum.env)
   assign("lambda_m", lambda_m, envir = dum.env)
   assign("r", ret, envir = dum.env)
-  dum.f<-function(cparam,env){
-    mgf_c <- MixedTS:::charact.MTSgam(t= 1i*cparam,
+  assign("Parametrization", Parametrization, envir = dum.env)
+  
+  dum.f<-function(par,env){
+    cparam <- par
+    mgf_c <- as.numeric(MixedTS:::charact.MTSgam(t= -1i*cparam,
              mu0 = env$mu0, mu = env$mu, sig = env$sig, a = env$a, 
              alpha = env$alpha, lambda_p = env$lambda_p,
-             lambda_m = env$lambda_m)
-    mgf_c1 <- MixedTS:::charact.MTSgam(t= 1i*(cparam+1),
+             lambda_m = env$lambda_m, Parametrization=env$Parametrization))
+    mgf_c1 <- as.numeric(MixedTS:::charact.MTSgam(t= -1i*(cparam+1),
               mu0 = env$mu0, mu = env$mu, sig = env$sig, a = env$a, 
               alpha = env$alpha, lambda_p = env$lambda_p,
-              lambda_m = env$lambda_m)
-    res <- mgf_c1/mgf-exp(env$r) 
+              lambda_m = env$lambda_m, Parametrization=env$Parametrization))
+    res <- ( log(mgf_c1) - log(mgf_c)-unique(env$r[[1]]))^2 
   }
   c_start <- 0
-  res <- optim(fn = dum.f, start = c_start, envir = dum.env)
+  res <- optim(fn = dum.f, par = c_start,lower=-(lambda_m-10^(-12)), upper=lambda_p-10^(-12),
+               method ="L-BFGS-B",env = dum.env)
   c_star <- res$par
   lambda_pq <- lambda_p - c_star
   lambda_mq <- lambda_m + c_star
-  mu_q <- (mu+((lambda_p^(alpha-1)-lambda_m^(alpha-1))-(lambda_pq^(alpha-1)-lambda_mq^(alpha-1)))/((alpha-1)*(lambda_pq^(alpha-2)+lambda_mq^(alpha-2))))/(lambda_pq^(alpha-2)+lambda_mq^(alpha-2))
-  mgf <- MixedTS:::charact.MTSgam(t= 1i*(c_star+1),
-         mu0 = mu0, mu = mu, sig = sig, a = a, 
-         alpha = alpha, lambda_p = lambda_p,
-         lambda_m = lambda_m)
-  charctexp <- log(mgf)
-  sig_2q <- (lambda_pq^(alpha-2)+lambda_mq^(alpha-2))/((1-sig^2*c_star*mu-sig^2*charctexp)*alpha*(alpha-1)*(lambda_p^(alpha-2)+lambda_m^(alpha-2)))
+  mu_q <- (mu+((lambda_p^(alpha-1)-lambda_m^(alpha-1))-(lambda_pq^(alpha-1)-lambda_mq^(alpha-1)))
+           /((alpha-1)*(lambda_p^(alpha-2)+lambda_m^(alpha-2))))
+  
+#   mgf <- as.numeric(MixedTS:::charact.MTSgam(t= -1i*c_star,
+#          mu0 =0, mu = mu, sig = sig, a = a, 
+#          alpha = alpha, lambda_p = lambda_p,
+#          lambda_m = lambda_m))
+#  charctexp <- log(mgf)
+  t <- -1i
+  
+  charctexp <- as.numeric(((lambda_p-1i*t)^alpha-lambda_p^alpha+(lambda_m+1i*t)^alpha-lambda_m^alpha)/(alpha*(alpha-1)*(lambda_p^(alpha-2)+lambda_m^(alpha-2)))
++(1i*t*(lambda_p^(alpha-1)-lambda_m^(alpha-1)))/((alpha-1)*(lambda_p^(alpha-2)+lambda_m^(alpha-2))))
+  
+  sig_2q <- sig^2*(lambda_pq^(alpha-2)+lambda_mq^(alpha-2))/((1-c_star*mu-sig^2*charctexp)*(lambda_p^(alpha-2)+lambda_m^(alpha-2)))
   sig_q <- sqrt(sig_2q)
   mu0_q <- mu0
+  mu_q <- mu_q*(lambda_p^(alpha-2)+lambda_m^(alpha-2))/(lambda_pq^(alpha-2)+lambda_mq^(alpha-2))
+  if(is.nan(sig_q)){sig_q <- 10^(-8)}
   res   <- setMixedTS.param(mu0 = mu0_q, mu = mu_q, 
            sigma = sig_q, a=a, alpha = alpha, 
            lambda_p = lambda_pq, lambda_m = lambda_mq)
@@ -117,12 +130,12 @@ DataOpt<-function(UnderPrice, PriceOpt, ImpliedVol, TimeToMat,
   if(length(qyield)==1){
     qyield <- rep(qyield,NumData)
   }
-  if(!missing(PriceOpt)){
+  if(missing(PriceOpt)){
     PriceOpt <- OptBSprice(S = UnderPrice , X = Strike,
                            r = rate, expTime = TimeToMat/YearBasis,
                            sig = ImpliedVol, y = qyield, type = type)
   }
-  if(!missing(ImpliedVol)){
+  if(missing(ImpliedVol)){
     ImpliedVol <- numeric()
   } 
   res<-new("OptionData",UnderPrice = UnderPrice, PriceOpt = PriceOpt,
@@ -145,5 +158,6 @@ OptBSprice <- function(S, X, r, expTime, sig, y, type) {
     }else{
       res[i] <- X[i]*exp(-rf[i]*expTime[i]) * pnorm(-d2[i]) - S[i]*pnorm(-d1[i])
     }
+    return(res)
   }
 }

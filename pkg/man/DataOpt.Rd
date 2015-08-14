@@ -4,7 +4,8 @@
 \title{Options Information available on the markets.}
 \description{The constructor \code{DataOpt} builds an object of class \code{OptionData-class}. This object contains option prices and volatilities available on the markets.}
 \usage{
-DataOpt(UnderPrice, PriceOpt, ImpliedVol, TimeToMat, Strike, type = "CALL", rate = 0, qyield = 0, Date = Sys.Date(), YearBasis = 360)
+DataOpt(UnderPrice, PriceOpt, ImpliedVol, TimeToMat, Strike,
+  type = "CALL", rate = 0, qyield = 0, Date = Sys.Date(), YearBasis = 360)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

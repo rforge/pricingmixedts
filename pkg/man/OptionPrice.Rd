@@ -7,7 +7,8 @@
 }
 \description{The \code{OptionPrice} computes the no-arbitrage price for a CALL or PUT option}
 \usage{
-\S4method{OptionPrice}{param.MixedTS}(object, S0, Strike, TimeToMat, ret = 0, yield = 0, basis = 360, QMeasure = TRUE,  type = "CALL")
+\S4method{OptionPrice}{param.MixedTS}(object, S0, Strike, TimeToMat, ret = 0, yield = 0,
+  basis = 360, QMeasure = FALSE,  type = "CALL")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -18,7 +19,9 @@
   \item{ret}{a numeric object that contains the costant risk free rate.}
   \item{yield}{convenience yield of the underlying asset.}
   \item{basis}{Identify how to counter the time interval.}
-  \item{QMeasure}{Identify the measure under which the model parameters are specified. The default \code{QMeasure=TRUE} means that the parameter are under Q martingale. If \code{FALSE}, the parameters under Q are obtained by Esscher Transform.}
+  \item{QMeasure}{a logical variable. If \code{Qmeasure = FALSE} the equivalent martingale
+is selected according to the Esscher Transform otherwise th mean correcting
+martingale measure is used when \code{Qmeasure = TRUE.}.}
   \item{type}{Identify the nature of the Option. Default \code{CALL}.}
 }
 %\details{}
